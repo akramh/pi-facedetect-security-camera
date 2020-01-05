@@ -1,8 +1,9 @@
 # pi-facedetect-security-camera
 Raspberry Pi security camera with face detection
 
-This is a simple raspberry pi camera that detects motion and once it does tries to match to faces that it already know. 
+This is a simple raspberry pi camera that detects motion and once it does tries to match to faces that it already know. This is all based on the work from pyimagesearch by Adrian Rosebrock at https://www.pyimagesearch.com/
 
+I put together a couple of his projects together to get this to work
 
 Example of how to run
 
