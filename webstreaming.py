@@ -51,6 +51,8 @@ def detect_motion(frameCount, data, model):
 	red = (0,0,255)
 	green = (0,255,0)
 
+	lastUploaded = datetime.datetime.now()
+
 	# loop over frames from the video stream
 	while True:
 		# read the next frame from the video stream, resize it,
@@ -84,6 +86,7 @@ def detect_motion(frameCount, data, model):
 				text = "motion detected"
 				color = green
 				facedetected = fd.detect_face(gray,rgb)
+				person = []
 
 				#(thresh, (minX, minY, maxX, maxY)) = motion
 				#cv2.rectangle(frame, (minX, minY), (maxX, maxY),green, 2)
@@ -91,8 +94,13 @@ def detect_motion(frameCount, data, model):
 					cv2.rectangle(frame, (left, top), (right, bottom),(0, 255, 0), 2)
 					y = top - 15 if top - 15 > 15 else top + 15
 					cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,0.75, (0, 255, 0), 2)
-				
+					person.append(name)
 
+				if (timestamp - lastUploaded).seconds >= 5:
+					for x in range(len(person)):
+						print(person[x] + " was detected at ", timestamp, " total ", total, " framecount ", frameCount)
+						lastUploaded = timestamp
+				
 		cv2.putText(frame, "{}".format(text), (10, 20),
 		cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 		# update the background model and increment the total number
