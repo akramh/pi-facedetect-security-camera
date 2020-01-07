@@ -12,7 +12,7 @@ python webstreaming.py --ip 127.0.0.1 --port 8080 -e encodings.new -c models\haa
 
 The project is using [dlib](http://dlib.net/compile.html) and a wrapper around it [face_recognition](https://github.com/ageitgey/face_recognition) (Here is how to prep your raspberrypi), credit to [Adam Geitgey face_recognition](https://github.com/ageitgey)
 
-## Installation  instructions:
+## Rasperry Pi 3 Installation  instructions:
 ```
 sudo apt-get update
 sudo apt-get upgrade
