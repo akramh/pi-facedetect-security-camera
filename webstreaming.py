@@ -4,6 +4,7 @@
 # import the necessary packages
 from pyimagesearch.motion_detection import SingleMotionDetector
 from pyimagesearch.face_recog import FaceDetector
+from pyimagesearch.keyclipwriter import KeyClipWriter
 from imutils.video import VideoStream
 from flask import Response
 from flask import Flask
@@ -15,6 +16,7 @@ import imutils
 import time
 import pickle
 import cv2
+import json
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful for multiple browsers/tabs
@@ -148,32 +150,23 @@ def video_feed():
 if __name__ == '__main__':
 	# construct the argument parser and parse command line arguments
 	ap = argparse.ArgumentParser()
-	ap.add_argument("-i", "--ip", type=str, required=True,
-		help="ip address of the device")
-	ap.add_argument("-o", "--port", type=int, required=True,
-		help="ephemeral port number of the server (1024 to 65535)")
-	ap.add_argument("-c", "--cascade", required=True,
-		help = "path to where the face cascade resides")
-	ap.add_argument("-e", "--encodings", required=True,
-		help="path to serialized db of facial encodings")
-
-	ap.add_argument("-f", "--frame-count", type=int, default=32,
-		help="# of frames used to construct the background model")
+	ap.add_argument("-c", "--conf", required=True,
+		help="path to the JSON configuration file")
 	args = vars(ap.parse_args())
 
+	conf = json.load(open(args["conf"]))
 
-	data = pickle.loads(open(args["encodings"], "rb").read())
-	detector = cv2.CascadeClassifier(args["cascade"])
-
+	data = pickle.loads(open(conf["encodings"], "rb").read())
+	detector = cv2.CascadeClassifier(conf["cascade_model"])
 
 	# start a thread that will perform motion detection
 	t = threading.Thread(target=detect_motion, args=(
-		args["frame_count"],data, detector))
+		conf["frame_count"],data, detector))
 	t.daemon = True
 	t.start()
 
 	# start the flask app
-	app.run(host=args["ip"], port=args["port"], debug=True,
+	app.run(host=conf["ip_address"], port=conf["port"], debug=True,
 		threaded=True, use_reloader=False)
 
 
