@@ -9,6 +9,9 @@ from imutils.video import VideoStream
 from flask import Response
 from flask import Flask
 from flask import render_template
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
 import threading
 import argparse
 import datetime
@@ -38,7 +41,37 @@ def index():
 	# return the rendered template
 	return render_template("index.html")
 
-def detect_motion(frameCount, data, model):
+def authenticate(serviceaccount):
+	# Use a service account
+	cred = credentials.Certificate(serviceaccount)
+	firebase_admin.initialize_app(cred)
+
+	db = firestore.client()
+	return db
+
+
+
+def log(timestamp, person,lastUploaded, db):
+	if (timestamp - lastUploaded).seconds >= 5:
+		for x in range(len(person)):
+			print(person[x] + " was detected at ", timestamp)
+
+			try:
+				doc_ref = db.collection(u'logs').document() 
+				doc_ref.set({
+					u'Person': person[x],
+					u'timestamp': timestamp
+					})
+			except:
+				print("[ERROR] writing to firebase failed")
+				pass
+			
+			lastUploaded = timestamp
+
+	return lastUploaded
+
+
+def detect_motion(frameCount, data, model, db):
 	# grab global references to the video stream, output frame, and
 	# lock variables
 	global vs, outputFrame, lock
@@ -98,10 +131,8 @@ def detect_motion(frameCount, data, model):
 					cv2.putText(frame, name, (left, y), cv2.FONT_HERSHEY_SIMPLEX,0.75, (0, 255, 0), 2)
 					person.append(name)
 
-				if (timestamp - lastUploaded).seconds >= 5:
-					for x in range(len(person)):
-						print(person[x] + " was detected at ", timestamp, " total ", total, " framecount ", frameCount)
-						lastUploaded = timestamp
+				# log persons detected
+				lastUploaded = log(timestamp,person, lastUploaded, db)
 				
 		cv2.putText(frame, "{}".format(text), (10, 20),
 		cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
@@ -125,19 +156,26 @@ def generate():
 		with lock:
 			# check if the output frame is available, otherwise skip
 			# the iteration of the loop
-			if outputFrame is None:
-				continue
+			try:
+				if outputFrame is None:
+					continue
 
-			# encode the frame in JPEG format
-			(flag, encodedImage) = cv2.imencode(".jpg", outputFrame)
+				# encode the frame in JPEG format
+				(flag, encodedImage) = cv2.imencode(".jpg", outputFrame)
 
-			# ensure the frame was successfully encoded
-			if not flag:
-				continue
-
-		# yield the output frame in the byte format
-		yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
-			bytearray(encodedImage) + b'\r\n')
+				# ensure the frame was successfully encoded
+				if not flag:
+					continue
+			except:
+				print("[ERROR] failed to generate output frame")
+				pass
+		try:
+			# yield the output frame in the byte format
+			yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
+				bytearray(encodedImage) + b'\r\n')
+		except:
+			print("[ERROR] failed to write encodedImage")
+			pass
 
 @app.route("/video_feed")
 def video_feed():
@@ -153,21 +191,31 @@ if __name__ == '__main__':
 	ap.add_argument("-c", "--conf", required=True,
 		help="path to the JSON configuration file")
 	args = vars(ap.parse_args())
+	db = None
 
 	conf = json.load(open(args["conf"]))
 
 	data = pickle.loads(open(conf["encodings"], "rb").read())
 	detector = cv2.CascadeClassifier(conf["cascade_model"])
+	
+	try:
+		db = authenticate(conf["service_account"])
+	except:
+		print("[ERROR] failed to authenticate to firebase")
+		pass
 
 	# start a thread that will perform motion detection
 	t = threading.Thread(target=detect_motion, args=(
-		conf["frame_count"],data, detector))
+		conf["frame_count"],data, detector, db))
 	t.daemon = True
 	t.start()
 
-	# start the flask app
-	app.run(host=conf["ip_address"], port=conf["port"], debug=True,
-		threaded=True, use_reloader=False)
+	try:
+		# start the flask app
+		app.run(host=conf["ip_address"], port=conf["port"], debug=True,
+			threaded=True, use_reloader=False)
+	except:
+		print("[ERROR] flask app failed")
 
 
 # release the video stream pointer
