@@ -41,37 +41,18 @@ def index():
 	# return the rendered template
 	return render_template("index.html")
 
-def authenticate(serviceaccount):
-	# Use a service account
-	cred = credentials.Certificate(serviceaccount)
-	firebase_admin.initialize_app(cred)
-
-	db = firestore.client()
-	return db
 
 
-
-def log(timestamp, person,lastUploaded, db):
+def log(timestamp, person,lastUploaded):
 	if (timestamp - lastUploaded).seconds >= 5:
 		for x in range(len(person)):
 			print(person[x] + " was detected at ", timestamp)
-
-			try:
-				doc_ref = db.collection(u'logs').document() 
-				doc_ref.set({
-					u'Person': person[x],
-					u'timestamp': timestamp
-					})
-			except:
-				print("[ERROR] writing to firebase failed")
-				pass
-			
 			lastUploaded = timestamp
 
 	return lastUploaded
 
 
-def detect_motion(frameCount, data, model, db):
+def detect_motion(frameCount, data, model):
 	# grab global references to the video stream, output frame, and
 	# lock variables
 	global vs, outputFrame, lock
@@ -132,7 +113,7 @@ def detect_motion(frameCount, data, model, db):
 					person.append(name)
 
 				# log persons detected
-				lastUploaded = log(timestamp,person, lastUploaded, db)
+				lastUploaded = log(timestamp,person, lastUploaded)
 				
 		cv2.putText(frame, "{}".format(text), (10, 20),
 		cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
@@ -198,15 +179,9 @@ if __name__ == '__main__':
 	data = pickle.loads(open(conf["encodings"], "rb").read())
 	detector = cv2.CascadeClassifier(conf["cascade_model"])
 	
-	try:
-		db = authenticate(conf["service_account"])
-	except:
-		print("[ERROR] failed to authenticate to firebase")
-		pass
-
 	# start a thread that will perform motion detection
 	t = threading.Thread(target=detect_motion, args=(
-		conf["frame_count"],data, detector, db))
+		conf["frame_count"],data, detector))
 	t.daemon = True
 	t.start()
 
