@@ -12,6 +12,7 @@ from flask import render_template
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+import firebase_admin import storage
 import threading
 import argparse
 import datetime
@@ -51,17 +52,24 @@ def authenticate(serviceaccount):
 
 
 
-def log(timestamp, person,lastUploaded, db):
+def log(frame,timestamp, person,lastUploaded, db):
 	if (timestamp - lastUploaded).seconds >= 5:
 		for x in range(len(person)):
 			print(person[x] + " was detected at ", timestamp)
 
 			try:
+				#upload frame to cloud service and grab a reference
+
+				bucket = storage.bucket()
+				
+
+				#log to cloud data store the person detected
 				doc_ref = db.collection(u'logs').document() 
 				doc_ref.set({
 					u'Person': person[x],
 					u'timestamp': timestamp
 					})
+
 			except:
 				print("[ERROR] writing to firebase failed")
 				pass
@@ -132,7 +140,7 @@ def detect_motion(frameCount, data, model, db):
 					person.append(name)
 
 				# log persons detected
-				lastUploaded = log(timestamp,person, lastUploaded, db)
+				lastUploaded = log(frame,timestamp,person, lastUploaded, db)
 				
 		cv2.putText(frame, "{}".format(text), (10, 20),
 		cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
