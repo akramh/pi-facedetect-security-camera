@@ -2,7 +2,7 @@
     "ip_address": "127.0.0.1",
     "port": "8080",
 	"cascade_model": "haarcascade_frontalface_default.xml",
-	"encodings": "encodings.1",
+	"encodings": "encodings.all",
     "output_path": "output",
     "frame_count": 32,
 	"codec": "MJPG",

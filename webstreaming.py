@@ -12,7 +12,7 @@ from flask import render_template
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-import firebase_admin import storage
+from firebase_admin import storage
 import threading
 import argparse
 import datetime
@@ -45,7 +45,9 @@ def index():
 def authenticate(serviceaccount):
 	# Use a service account
 	cred = credentials.Certificate(serviceaccount)
-	firebase_admin.initialize_app(cred)
+	firebase_admin.initialize_app(cred, {
+    'storageBucket': 'pi-security-camera-45bc9.appspot.com'
+})
 
 	db = firestore.client()
 	return db
@@ -59,7 +61,6 @@ def log(frame,timestamp, person,lastUploaded, db):
 
 			try:
 				#upload frame to cloud service and grab a reference
-
 				bucket = storage.bucket()
 				
 
